@@ -10,6 +10,8 @@ import (
 
 func Test_printSomething(t *testing.T) {
 	// Save the original stdout to restore it later
+	// os.Stdout is a pointer to an os.File struct that represents the standard output globally,
+	// which can be used by any part of your program.
 	original := os.Stdout
 
 	// Create a pipe to capture the output
