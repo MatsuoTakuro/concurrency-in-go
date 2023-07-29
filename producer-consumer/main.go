@@ -14,7 +14,7 @@ var pizzasMade, pizzasFailed, total uint
 
 type Producer struct {
 	order chan PizzaOrder
-	quit  chan chan error
+	quit  chan chan error // used to send quit signals to the producer's goroutines.
 }
 
 type PizzaOrder struct {
@@ -24,6 +24,7 @@ type PizzaOrder struct {
 }
 
 func (p *Producer) Quit() error {
+	// this new quit channel is used to wait for a confirmation that the Start method has finished its work.
 	quit := make(chan error)
 	p.quit <- quit // send the channel to the quit channel
 	return <-quit  // wait for the quit channel to be closed
@@ -123,6 +124,23 @@ func main() {
 
 	// start the producer to make pizzas
 	go pizzaJob.Start()
+	/*
+		If you call pizzaJob.Start() as a goroutine twice, you'll have two goroutines running the Start method concurrently.
+		This could lead to several issues:
+
+		Race conditions: Both goroutines will be accessing and modifying the same Producer object (pizzaJob),
+		which could lead to race conditions. For example, they might both try to increment current_num at the same time, leading to inconsistent results.
+
+		Double closing of channels: If one goroutine receives a quit signal and closes the order channel,
+		and then the other goroutine also tries to close the order channel, this will cause a panic, because closing an already closed channel in Go is a runtime error.
+
+		Confusing output: The output of your program could be confusing, because the two goroutines might be interleaving their print statements.
+		For example, you might see "Received order #1!" printed twice before seeing "Making pizza #1. It will take X seconds..." printed at all.
+
+		In general, if you have a method that modifies shared state (like Start does), it's usually not safe to call it from multiple goroutines at the same time,
+		unless the method has been specifically designed to be safe for concurrent use (for example, by using locks to protect the shared state).
+		In your case, Start has not been designed for concurrent use, so it's best to only call it from one goroutine at a time.
+	*/
 
 	// consume pizza orders
 	for result := range pizzaJob.order {
