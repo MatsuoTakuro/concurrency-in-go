@@ -1,7 +1,11 @@
+//go:build main
+// +build main
+
 package main
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 )
@@ -20,6 +24,9 @@ var hungers = 3
 var eatTime = 1 * time.Second
 var thinkTime = 1 * time.Second
 var sleepTime = 1 * time.Second
+
+var orderMutex sync.Mutex
+var orderFinished []string
 
 type Philosopher struct {
 	name  string
@@ -75,6 +82,10 @@ func (p *Philosopher) dine(
 
 	fmt.Printf("%s is satisified.\n", p.name)
 	fmt.Printf("%s left the table.\n", p.name)
+
+	orderMutex.Lock()
+	orderFinished = append(orderFinished, p.name)
+	orderMutex.Unlock()
 }
 
 var philosophers = []Philosopher{
@@ -111,12 +122,16 @@ func main() {
 	fmt.Println("---------------------------")
 	fmt.Println("The table is empty.")
 
+	time.Sleep(sleepTime)
+
 	// start the meal
 	dine()
 
 	// print out finished message
 	fmt.Println("The table is empty.")
 
+	time.Sleep(sleepTime)
+	fmt.Printf("Order finished: %s.\n", strings.Join(orderFinished, ", "))
 }
 
 func dine() {

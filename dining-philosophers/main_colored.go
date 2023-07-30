@@ -1,10 +1,11 @@
-//go:build ignore
-// +build ignore
+//go:build main_colored
+// +build main_colored
 
 package main
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,6 +26,9 @@ var hungers = 3
 var eatTime = 1 * time.Second
 var thinkTime = 1 * time.Second
 var sleepTime = 1 * time.Second
+
+var orderMutex sync.Mutex
+var orderFinished []string
 
 type Philosopher struct {
 	name  string
@@ -82,10 +86,15 @@ func (p *Philosopher) dine(
 
 	p.color.Printf("%s is satisified.\n", p.name)
 	p.color.Printf("%s left the table.\n", p.name)
+
+	orderMutex.Lock()
+	orderFinished = append(orderFinished, p.name)
+	orderMutex.Unlock()
 }
 
 var printMutex sync.Mutex // for locking output to the terminal because the fatih/color package is not thread-safe.
 
+// TODO: sometimes the output is not colored. Why?
 func (p *Philosopher) Printf(format string, a ...interface{}) {
 	printMutex.Lock()
 	defer printMutex.Unlock()
@@ -131,12 +140,16 @@ func main() {
 	fmt.Println("---------------------------")
 	fmt.Println("The table is empty.")
 
+	time.Sleep(sleepTime)
+
 	// start the meal
 	dine()
 
 	// print out finished message
 	fmt.Println("The table is empty.")
 
+	time.Sleep(sleepTime)
+	fmt.Printf("Order finished: %s.\n", strings.Join(orderFinished, ", "))
 }
 
 func dine() {
