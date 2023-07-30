@@ -4,4 +4,5 @@ use (
 	./mymutex
 	./mywaitgroup
 	./producer-consumer
+  ./dining-philosophers
 )
