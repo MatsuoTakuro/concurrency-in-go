@@ -6,4 +6,6 @@ use (
 	./producer-consumer
   ./dining-philosophers
   ./simple-channels
+  ./channels-select
+  ./buffered-channels
 )
