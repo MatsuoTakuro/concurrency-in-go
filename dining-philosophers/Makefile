@@ -9,3 +9,4 @@ test:
 
 run_colored:
 	go run -tags main_colored -race .
+	
