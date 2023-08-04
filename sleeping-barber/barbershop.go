@@ -59,7 +59,7 @@ func (s *BarberShop) makeBarberWork(barber *Barber) {
 					barber.wakeUp()
 				}
 				// cut hair
-				s.cutHair(barber, client)
+				s.makeBarberCutHair(barber, client)
 
 			} else {
 				// no clients left, so send the barber home
@@ -71,12 +71,12 @@ func (s *BarberShop) makeBarberWork(barber *Barber) {
 	}()
 }
 
-func (s *BarberShop) cutHair(barber *Barber, client string) {
+func (s *BarberShop) makeBarberCutHair(barber *Barber, client string) {
 	barber.cutHair(client)
 }
 
 func (s *BarberShop) sendBarberHome(barber *Barber) {
-	barber.sendBarberHome()
+	barber.goHome()
 	s.BarbersDoneChan <- true
 }
 

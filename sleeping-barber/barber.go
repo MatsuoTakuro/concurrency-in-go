@@ -35,7 +35,7 @@ func (b *Barber) cutHair(client string) {
 	color.Green("%s is finished cutting %s's hair.", b.Name, client)
 }
 
-func (b *Barber) sendBarberHome() {
+func (b *Barber) goHome() {
 	color.Cyan("%s is going home.", b.Name)
 }
 
