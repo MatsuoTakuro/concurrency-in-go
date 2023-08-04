@@ -8,10 +8,10 @@ import (
 	"github.com/fatih/color"
 )
 
-var seatingCapacity uint8 = 10
-var arrivalRate uint8 = 100 // clients arriving at (roughly) regular intervals.
-var cutTime = 1000 * time.Millisecond
-var openTime = 10 * time.Second
+var SeatingCapacity uint8 = 10
+var ArrivalRate uint8 = 100 // clients arriving at (roughly) regular intervals.
+var CutTime = 1000 * time.Millisecond
+var OpenTime = 10 * time.Second
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
@@ -19,34 +19,29 @@ func main() {
 	color.Yellow("The Sleeping Barber Problem")
 	color.Yellow("---------------------------")
 
-	clientChan := make(chan string, seatingCapacity)
+	clientChan := make(chan string, SeatingCapacity)
 	doneChan := make(chan bool)
 
-	shop := BarberShop{
-		HairCutTime:     cutTime,
-		NumberOfBarbers: 0,
-		BarbersDoneChan: doneChan,
-		ClientsChan:     clientChan,
-		IsOpen:          false,
-	}
+	shop := NewBarberShop(doneChan, clientChan)
 
-	shop.addBarber("Frank")
-	shop.addBarber("Gerard")
-	shop.addBarber("Milton")
-	shop.addBarber("Susan")
-	shop.addBarber("Kelly")
-	shop.addBarber("Pat")
+	NewBarber("Frank").comeToWork(shop)
+	NewBarber("Gerard").comeToWork(shop)
+	NewBarber("Milton").comeToWork(shop)
+	NewBarber("Susan").comeToWork(shop)
+	NewBarber("Kelly").comeToWork(shop)
+	NewBarber("Pat").comeToWork(shop)
 
 	shopClosing := make(chan bool)
 	closed := make(chan bool)
 
 	// open the shop and close it after a certain amount of time
-	go shop.Open(openTime, shopClosing, closed)
+	go shop.Open(OpenTime, shopClosing, closed)
 
+	// accept clients at a certain rate
 	var clientNum uint = 1
 	go func() {
 		for {
-			randomMillsecNums := rand.Int() % (2 * int(arrivalRate))
+			randomMillsecNums := rand.Int() % (2 * int(ArrivalRate))
 			select {
 			case <-shopClosing:
 				return

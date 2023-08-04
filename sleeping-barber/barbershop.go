@@ -8,12 +8,20 @@ import (
 )
 
 type BarberShop struct {
-	HairCutTime     time.Duration
-	NumberOfBarbers uint
+	Barbers         []*Barber
 	BarbersDoneChan chan bool
 	ClientsChan     chan string
 	IsOpen          bool
-	mu              sync.RWMutex
+	openMutex       sync.RWMutex
+}
+
+func NewBarberShop(doneChan chan bool, clientChan chan string) *BarberShop {
+	return &BarberShop{
+		Barbers:         []*Barber{},
+		BarbersDoneChan: doneChan,
+		ClientsChan:     clientChan,
+		IsOpen:          false,
+	}
 }
 
 // Open opens the barbershop for business.
@@ -22,34 +30,33 @@ func (s *BarberShop) Open(openTime time.Duration, shopClosing, closed chan<- boo
 
 	s.open()
 
+	// wait for the shop to close after a certain amount of time
 	<-time.After(openTime)
 	shopClosing <- true
 	s.closeShopForDay()
 	closed <- true
 }
 
-func (s *BarberShop) addBarber(barber string) {
+func (s *BarberShop) makeBarberWork(barber *Barber) {
 
-	s.NumberOfBarbers++
+	s.Barbers = append(s.Barbers, barber)
 
 	go func() {
-		var isSleeping bool
-		color.Yellow("%s goes to the waiting room to check for clients.", barber)
-
+		// check the waiting room for clients
+		barber.checkWaitingRoom()
 		for {
 			// if there are no clients, the barber goes to sleep
 			if len(s.ClientsChan) == 0 {
-				color.Yellow("There is nothing to do, so %s takes a nap.", barber)
-				isSleeping = true
+				barber.sleep()
 			}
 
 			// NOTE: The variable 'waitingForHaircut' remains true as long as there are clients still in the waiting room.
 			// This holds true even when the shop is in the process of closing.
 			client, waitingForHaircut := <-s.ClientsChan
 			if waitingForHaircut {
-				if isSleeping {
+				if barber.isAsleep() {
 					color.Yellow("%s wakes %s up.", client, barber)
-					isSleeping = false
+					barber.wakeUp()
 				}
 				// cut hair
 				s.cutHair(barber, client)
@@ -64,14 +71,12 @@ func (s *BarberShop) addBarber(barber string) {
 	}()
 }
 
-func (s *BarberShop) cutHair(barber, client string) {
-	color.Green("%s is cutting %s's hair.", barber, client)
-	time.Sleep(s.HairCutTime)
-	color.Green("%s is finished cutting %s's hair.", barber, client)
+func (s *BarberShop) cutHair(barber *Barber, client string) {
+	barber.cutHair(client)
 }
 
-func (s *BarberShop) sendBarberHome(barber string) {
-	color.Cyan("%s is going home.", barber)
+func (s *BarberShop) sendBarberHome(barber *Barber) {
+	barber.sendBarberHome()
 	s.BarbersDoneChan <- true
 }
 
@@ -82,7 +87,7 @@ func (s *BarberShop) closeShopForDay() {
 	s.close()
 
 	// wait for all barbers to finish a client's haircuts and go home
-	for i := 1; i <= int(s.NumberOfBarbers); i++ {
+	for i := 1; i <= int(len(s.Barbers)); i++ {
 		<-s.BarbersDoneChan
 	}
 	close(s.BarbersDoneChan)
@@ -110,8 +115,8 @@ func (s *BarberShop) accept(client string) {
 }
 
 func (s *BarberShop) open() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.openMutex.Lock()
+	defer s.openMutex.Unlock()
 	s.IsOpen = true
 	color.Green("The shop is open for the day!")
 }
@@ -119,13 +124,13 @@ func (s *BarberShop) open() {
 func (s *BarberShop) close() {
 	close(s.ClientsChan)
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.openMutex.Lock()
+	defer s.openMutex.Unlock()
 	s.IsOpen = false
 }
 
 func (s *BarberShop) isOpen() bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.openMutex.RLock()
+	defer s.openMutex.RUnlock()
 	return s.IsOpen
 }
