@@ -16,7 +16,7 @@ func listenToChan(ch <-chan int) {
 }
 
 func main() {
-	ch := make(chan int, 10)
+	ch := make(chan int, 10) // set the buffer size
 
 	go listenToChan(ch)
 

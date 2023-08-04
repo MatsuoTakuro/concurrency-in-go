@@ -8,4 +8,5 @@ use (
   ./simple-channels
   ./channels-select
   ./buffered-channels
+  ./sleeping-barber
 )
