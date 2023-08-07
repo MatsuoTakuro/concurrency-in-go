@@ -9,4 +9,5 @@ use (
   ./channels-select
   ./buffered-channels
   ./sleeping-barber
+  ./final-project
 )
