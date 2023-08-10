@@ -24,8 +24,8 @@ func main() {
 	// create waitgroup
 	wg := sync.WaitGroup{}
 
-	// set up the application config
-	_ = Config{
+	// set up the server
+	srv := Server{
 		Session:  session,
 		DB:       db,
 		InfoLog:  infoLogger,
@@ -36,4 +36,5 @@ func main() {
 	// set up mail
 
 	// listen for web connections
+	srv.serve()
 }

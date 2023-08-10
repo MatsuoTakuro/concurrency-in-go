@@ -10,6 +10,7 @@ require (
 require (
 	github.com/alexedwards/scs/redisstore v0.0.0-20230327161757-10d4299e3b24
 	github.com/alexedwards/scs/v2 v2.5.1
+	github.com/go-chi/chi/v5 v5.0.10
 	github.com/gomodule/redigo v1.8.9
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect

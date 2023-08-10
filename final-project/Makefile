@@ -11,8 +11,17 @@ build:
 ## run: builds and runs the application setting the DSN and REDIS env vars
 run: build
 	@echo "Starting..."
-	@env DSN=${DSN} REDIS=${REDIS} ./${BINARY_NAME} &
+	env DSN=${DSN} REDIS=${REDIS} ./${BINARY_NAME} &
 	@echo "Started!"
+
+## ps: shows the running application process info
+ps:
+	@PID=$(shell pgrep -f './${BINARY_NAME}'); \
+	if [ -n "$$PID" ]; then \
+		ps -p $$PID -o pid,ppid,user,stat,comm,args,start,time,%cpu,%mem; \
+	else \
+		echo "Process './${BINARY_NAME}' not found."; \
+	fi
 
 ## clean: runs go clean and deletes binaries
 clean:
@@ -27,7 +36,7 @@ start: run
 ## stop: stops the running application
 stop:
 	@echo "Stopping..."
-	@-pkill -SIGTERM -f "./${BINARY_NAME}"
+	-pkill -SIGTERM -f "./${BINARY_NAME}"
 	@echo "Stopped!"
 
 ## restart: stops and starts the application
