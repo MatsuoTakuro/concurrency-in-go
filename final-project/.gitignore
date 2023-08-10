@@ -22,4 +22,4 @@ go.work
 
 db-data
 .vscode/
-myapp
+/myapp
