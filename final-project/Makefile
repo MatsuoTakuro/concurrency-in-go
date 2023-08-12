@@ -45,3 +45,9 @@ restart: stop start
 ## test: runs all tests
 test:
 	go test -v ./...
+
+## db_in: access the database
+db_in:
+	@echo "Access the database..."
+	PGPASSWORD='password' psql -h localhost -p 5432 -U postgres -d concurrency
+	@echo "Finished access the database!"

@@ -15,6 +15,8 @@ services:
       POSTGRES_DB: concurrency
     volumes:
       - ./db-data/postgres/:/var/lib/postgresql/data/
+      # delete the existing database files in the ./db-data/postgres/ directory once if you want to initialize a new database
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
   #  start Redis, and ensure that data is stored to a mounted volume
   redis:
