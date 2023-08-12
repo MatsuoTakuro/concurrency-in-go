@@ -15,6 +15,18 @@ func (s *Server) routes() http.Handler {
 	mux.Use(s.SessionLoad)
 
 	mux.Get("/", s.HomePage)
+	{
+		loginPath := "/login"
+		mux.Get(loginPath, s.LoginPage)
+		mux.Post(loginPath, s.Login)
+	}
+	mux.Get("/logout", s.Logout)
+	{
+		registerPath := "/register"
+		mux.Get(registerPath, s.RegisterPage)
+		mux.Post(registerPath, s.RegisterAccount)
+	}
+	mux.Get("/activate-account", s.ActivateAccount)
 
 	return mux
 }

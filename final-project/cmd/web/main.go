@@ -30,10 +30,13 @@ func main() {
 		DB:       db,
 		InfoLog:  infoLogger,
 		ErrorLog: errLogger,
-		Wait:     &wg,
+		Shutdown: &wg,
 	}
 
 	// set up mail
+
+	// listen for signals
+	go srv.listenForShutdown()
 
 	// listen for web connections
 	srv.serve()
