@@ -62,17 +62,11 @@ func (s *Server) listenForShutdown() {
 		Contexts provide a standardized way to handle cancellation and timeouts.
 		By using a context, you can more easily extend your code in the future to handle additional cancellation conditions or to pass values in a request-scoped manner.
 
-	Here's a simple example of how you could use signal.NotifyContext in your application:
-
-	```go
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-	<-ctx.Done()
-	```
-
-	This way is more concise and integrates better with other Go code that uses contexts.
+	There is a file named `shutdown_example.go` in the same directory that is just to show a simple example of how you could use signal.NotifyContext in your application.
+	That way there is more concise and integrates better with other Go code that uses contexts.
 	It's a more modern approach that leverages the powerful context package in Go, leading to cleaner and more maintainable code.
-	You can refer to another more realistic example for usage of signal.NotifyContext here -> (https://github.com/MatsuoTakuro/fcoin-balances-manager/blob/0da561455bcfcc3a54a9b6063a9e8c50e9e697dd/cmd/server.go#L30)
+
+	Also, you can refer to another more realistic example for usage of signal.NotifyContext here -> (https://github.com/MatsuoTakuro/fcoin-balances-manager/blob/0da561455bcfcc3a54a9b6063a9e8c50e9e697dd/cmd/server.go#L30)
 	*/
 }
 
