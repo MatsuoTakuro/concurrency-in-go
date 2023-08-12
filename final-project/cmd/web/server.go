@@ -24,7 +24,7 @@ func (s *Server) serve() {
 		Handler: s.routes(),
 	}
 
-	s.InfoLog.Println("Starting web server...")
+	s.InfoLog.Printf("Starting web server... at http://localhost:%s\n", WEB_PORT)
 	if err := srv.ListenAndServe(); err != nil {
 		log.Panic(err)
 	}
