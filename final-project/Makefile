@@ -50,4 +50,10 @@ test:
 db_in:
 	@echo "Access the database..."
 	PGPASSWORD='password' psql -h localhost -p 5432 -U postgres -d concurrency
-	@echo "Finished access the database!"
+	@echo "Finished access to the database!"
+
+## session_in: access the redis
+session_in:
+	@echo "Access the redis as session store..."
+	redis-cli -h 127.0.0.1 -p 6399
+	@echo "Finished access to the redis!"

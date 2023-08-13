@@ -74,9 +74,9 @@ func (s *Server) render(
 
 //
 func (s *Server) UpdateDefaultData(td *TemplateData, r *http.Request) *TemplateData {
-	td.Flash = s.Session.PopString(r.Context(), FLASH_KEY)
-	td.Warning = s.Session.PopString(r.Context(), WARNING_KEY)
-	td.Error = s.Session.PopString(r.Context(), ERROR_KEY)
+	td.Flash = s.Session.PopString(r.Context(), FLASH_CTX)
+	td.Warning = s.Session.PopString(r.Context(), WARNING_CTX)
+	td.Error = s.Session.PopString(r.Context(), ERROR_CTX)
 	if s.IsAuthenticated(r) {
 		td.Authenticated = true
 		// TODO - get more user information
@@ -87,5 +87,5 @@ func (s *Server) UpdateDefaultData(td *TemplateData, r *http.Request) *TemplateD
 }
 
 func (s *Server) IsAuthenticated(r *http.Request) bool {
-	return s.Session.Exists(r.Context(), USER_ID_KEY)
+	return s.Session.Exists(r.Context(), USER_ID_CTX)
 }

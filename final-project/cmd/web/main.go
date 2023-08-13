@@ -4,6 +4,8 @@ import (
 	"log"
 	"os"
 	"sync"
+
+	"github.com/MatsuoTakuro/final-project/data"
 )
 
 const WEB_PORT = "80"
@@ -31,6 +33,7 @@ func main() {
 		InfoLog:  infoLogger,
 		ErrorLog: errLogger,
 		Shutdown: &wg,
+		Models:   data.New(db),
 	}
 
 	// set up mail

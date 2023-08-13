@@ -10,6 +10,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/MatsuoTakuro/final-project/data"
 	"github.com/alexedwards/scs/v2"
 )
 
@@ -19,6 +20,7 @@ type Server struct {
 	InfoLog  *log.Logger
 	ErrorLog *log.Logger
 	Shutdown *sync.WaitGroup
+	Models   data.Models
 }
 
 func (s *Server) serve() {

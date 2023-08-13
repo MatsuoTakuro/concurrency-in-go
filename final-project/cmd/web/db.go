@@ -46,6 +46,9 @@ func connectToDB() *sql.DB {
 }
 
 func openDB(dsn string) (*sql.DB, error) {
+	// NOTE: https://pkg.go.dev/database/sql#Open
+	// The returned DB is safe for concurrent use by multiple goroutines and maintains its own pool of idle connections.
+	// Thus, the Open function should be called just once. It is rarely necessary to close a DB.
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, err

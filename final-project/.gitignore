@@ -20,6 +20,14 @@
 # Go workspace file
 go.work
 
+# DB data mounted into the container as its volume
 db-data
+
+# Vscode settings
 .vscode/
+
+# Binary built
 /myapp
+
+# Note on user passwords
+user_pass.txt

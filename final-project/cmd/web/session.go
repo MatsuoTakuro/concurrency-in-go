@@ -1,16 +1,20 @@
 package main
 
 import (
+	"encoding/gob"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/MatsuoTakuro/final-project/data"
 	"github.com/alexedwards/scs/redisstore"
 	"github.com/alexedwards/scs/v2"
 	"github.com/gomodule/redigo/redis"
 )
 
 func initSession() *scs.SessionManager {
+	gob.Register(data.User{}) // need to register the User struct for session to work because it's a custom type
+
 	session := scs.New()
 	session.Store = redisstore.New(initRedis())    // set redis as the session store
 	session.Lifetime = 24 * time.Hour              // set the session lifetime to 24 hours
