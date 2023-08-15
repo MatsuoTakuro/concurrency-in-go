@@ -1,11 +1,24 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
+	"html/template"
 	"sync"
 	"time"
 
+	"github.com/vanng822/go-premailer/premailer"
 	mail "github.com/xhit/go-simple-mail/v2"
 )
+
+const (
+	EMAIL_TEMPLATE        = "mail"
+	EMAIL_HTML_TPML_NAME  = "email-html"
+	EMAIL_PLAIN_TPML_NAME = "email-plain"
+	EMAIL_BODY            = "body"
+)
+
+var EmailBaseTemplate = "./cmd/web/templates/%s.html.gohtml"
 
 type Mail struct {
 	Domain      string
@@ -38,7 +51,7 @@ func (m *Mail) sendMail(
 	errorChan chan<- error, // error channel to send errors
 ) {
 	if msg.Template == "" {
-		msg.Template = "mail"
+		msg.Template = EMAIL_TEMPLATE
 	}
 
 	if msg.From == "" {
@@ -97,13 +110,93 @@ func (m *Mail) sendMail(
 }
 
 func (m *Mail) buildHTMLMessage(msg Message) (string, error) {
+	baseTmpl := fmt.Sprintf(EmailBaseTemplate, msg.Template)
 
-	return "", nil
+	htmlTmpl, err := template.New(EMAIL_HTML_TPML_NAME).ParseFiles(baseTmpl)
+	if err != nil {
+		return "", err
+	}
+
+	var b bytes.Buffer
+	if err = htmlTmpl.ExecuteTemplate(&b, EMAIL_BODY, msg.DataMap); err != nil {
+		return "", err
+	}
+
+	htmlMsg := b.String()
+	htmlCSSMsg, err := m.inlineCSS(htmlMsg)
+	if err != nil {
+		return "", err
+	}
+
+	return htmlCSSMsg, nil
 }
 
 func (m *Mail) buildPlainTextMessage(msg Message) (string, error) {
+	baseTmpl := fmt.Sprintf(EmailBaseTemplate, msg.Template)
 
-	return "", nil
+	plainTmpl, err := template.New(EMAIL_PLAIN_TPML_NAME).ParseFiles(baseTmpl)
+	if err != nil {
+		return "", err
+	}
+
+	var b bytes.Buffer
+	if err = plainTmpl.ExecuteTemplate(&b, EMAIL_BODY, msg.DataMap); err != nil {
+		return "", err
+	}
+
+	plainMsg := b.String()
+
+	return plainMsg, nil
+}
+
+func (m *Mail) inlineCSS(html string) (string, error) {
+	opts := premailer.Options{
+		RemoveClasses:     false,
+		CssToAttributes:   false,
+		KeepBangImportant: true,
+	}
+	/*
+		The code snippet you provided is configuring options for the premailer package, which is a Go library used to inline CSS styles into HTML documents.
+		This is often done to ensure that HTML emails render consistently across different email clients, as not all email clients support linked or embedded stylesheets.
+
+		Here's a brief explanation of the options you've listed:
+
+		RemoveClasses: false:
+			When set to true, this option would remove all class attributes from the HTML elements after inlining the CSS styles.
+			By setting it to false, the class attributes are preserved in the HTML.
+			By keeping class attributes in the HTML, it seems that you want to preserve the original structure of the HTML document.
+			This could be useful if you have JavaScript that relies on these class attributes, or if you want to allow further styling or manipulation of the HTML after the inlining process.
+
+		CssToAttributes: false:
+			When set to true, this option would convert CSS properties into equivalent HTML attributes where possible (e.g., converting width in CSS to the width attribute in HTML).
+			By setting it to false, this conversion is not performed.
+			By not converting CSS properties to equivalent HTML attributes, you're likely aiming to keep the HTML as close to the original as possible.
+			This might be important if you want to ensure that the HTML renders consistently across different environments,
+			or if you have specific styling that can't be accurately represented using HTML attributes.
+
+		KeepBangImportant: true:
+			The !important declaration in CSS is used to give a CSS property higher importance than other rules.
+			When this option is set to true, the !important declarations are kept in the inlined styles. If set to false, they would be removed.
+			By keeping the !important declarations, you're likely trying to ensure that the specific styling rules that were marked as important in the original CSS are respected in the inlined version.
+			This could be crucial if you have complex styling that relies on the !important declarations to render correctly.
+
+		Overall, these settings suggest a desire to perform CSS inlining in a way that preserves the original structure and styling of the HTML as much as possible,
+		without making significant alterations or simplifications.
+		This could be important in scenarios where you have complex or nuanced styling, where you want to maintain compatibility with specific rendering environments,
+		or where you want to allow further manipulation or processing of the HTML after the inlining process.
+	*/
+
+	prem, err := premailer.NewPremailerFromString(html, &opts)
+	if err != nil {
+		return "", err
+	}
+
+	htmlCSS, err := prem.Transform()
+	if err != nil {
+		return "", err
+	}
+
+	return htmlCSS, nil
 }
 
 func (m *Mail) getEncryption() mail.Encryption {
