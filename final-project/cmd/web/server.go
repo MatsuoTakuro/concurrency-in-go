@@ -151,7 +151,8 @@ func (s *Server) shutdown() {
 	s.Mailer.Stop <- true // send a signal to stop listening for mails after all mails are sent.
 	// if you send the signal before all mails are sent, you may lose some mails.
 	// because in the listenForMail method, the `select` may choose the `case` that is waiting for a signal to stop listening for mails at random to execute,
-	// not the `case` that is waiting for message to send via another channel.
+	// not `case` that is waiting for message to send via message channel that may not be empty after stopping accepting new messages to send.
+	// Or it may be in the process of sending a message with the Mailer.sendMail method.
 
 	s.InfoLog.Println("terminating mailer...")
 	s.Mailer.terminate()
