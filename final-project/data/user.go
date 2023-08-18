@@ -3,9 +3,24 @@ package data
 import (
 	"context"
 	"errors"
-	"golang.org/x/crypto/bcrypt"
 	"log"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
+)
+
+type IsActive uint8
+
+const (
+	Inactive IsActive = iota
+	Active
+)
+
+type IsAdmin uint8
+
+const (
+	NotAdmin IsAdmin = iota
+	Admin
 )
 
 // User is the structure which holds one user from the database.
@@ -15,8 +30,8 @@ type User struct {
 	FirstName string
 	LastName  string
 	Password  string
-	Active    int
-	IsAdmin   int
+	IsActive  IsActive
+	IsAdmin   IsAdmin
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	Plan      *Plan
@@ -59,7 +74,7 @@ func (u *User) GetAll() ([]*User, error) {
 			&user.FirstName,
 			&user.LastName,
 			&user.Password,
-			&user.Active,
+			&user.IsActive,
 			&user.IsAdmin,
 			&user.CreatedAt,
 			&user.UpdatedAt,
@@ -105,7 +120,7 @@ func (u *User) GetByEmail(email string) (*User, error) {
 		&user.FirstName,
 		&user.LastName,
 		&user.Password,
-		&user.Active,
+		&user.IsActive,
 		&user.IsAdmin,
 		&user.CreatedAt,
 		&user.UpdatedAt,
@@ -157,7 +172,7 @@ func (u *User) GetOne(id int) (*User, error) {
 		&user.FirstName,
 		&user.LastName,
 		&user.Password,
-		&user.Active,
+		&user.IsActive,
 		&user.IsAdmin,
 		&user.CreatedAt,
 		&user.UpdatedAt,
@@ -211,7 +226,7 @@ func (u *User) Update() error {
 		u.Email,
 		u.FirstName,
 		u.LastName,
-		u.Active,
+		u.IsActive,
 		time.Now(),
 		u.ID,
 	)
@@ -272,7 +287,7 @@ func (u *User) Insert(user User) (int, error) {
 		user.FirstName,
 		user.LastName,
 		hashedPassword,
-		user.Active,
+		user.IsActive,
 		time.Now(),
 		time.Now(),
 	).Scan(&newID)

@@ -13,10 +13,18 @@ import (
 )
 
 const (
-	EMAIL_TEMPLATE        = "mail"
 	EMAIL_HTML_TPML_NAME  = "email-html"
 	EMAIL_PLAIN_TPML_NAME = "email-plain"
 	EMAIL_BODY            = "body"
+)
+
+// Template is a template to render for the email body.
+// It also represents the name of an email template.
+type Template string
+
+const (
+	MAIL          Template = "mail"
+	CONFIRM_EMAIL Template = "confirmation-email"
 )
 
 type EncryptType string
@@ -54,7 +62,7 @@ type Message struct {
 	Attachments []string
 	Data        any
 	DataMap     map[string]any
-	Template    string // Template is a template to render for the email body.
+	Template    Template
 }
 
 func (m *Mailer) sendMail(
@@ -64,7 +72,7 @@ func (m *Mailer) sendMail(
 	defer m.Send.Done()
 
 	if msg.Template == "" {
-		msg.Template = EMAIL_TEMPLATE
+		msg.Template = MAIL
 	}
 
 	if msg.From == "" {

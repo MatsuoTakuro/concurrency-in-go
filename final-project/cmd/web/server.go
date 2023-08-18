@@ -41,6 +41,7 @@ func (s *Server) initMailer() {
 	msg := make(chan Message, 100)
 	stop := make(chan bool)
 
+	// NOTE: of course, originally, domain, host or port should be in an environment variable or config file.
 	s.Mailer = Mailer{
 		Domain:        "localhost",
 		Host:          "localhost",

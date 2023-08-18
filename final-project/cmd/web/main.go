@@ -8,6 +8,7 @@ import (
 	"github.com/MatsuoTakuro/final-project/data"
 )
 
+// NOTE: of course, originally, this should be in an environment variable or config file.
 const WEB_PORT = "80"
 
 func main() {

@@ -9,6 +9,8 @@ const (
 )
 
 const (
-	EMAIL_ATTR    = "email"
-	PASSWORD_ATTR = "password"
+	EMAIL_ATTR      = "email"
+	PASSWORD_ATTR   = "password"
+	FIRST_NAME_ATTR = "first-name"
+	LAST_NAME_ATTR  = "last-name"
 )

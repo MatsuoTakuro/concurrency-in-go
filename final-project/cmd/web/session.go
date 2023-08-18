@@ -13,7 +13,8 @@ import (
 )
 
 func initSession() *scs.SessionManager {
-	gob.Register(data.User{}) // need to register the User struct for session to work because it's a custom type
+	// WARN: need to register the User struct for session to work because it's a custom type
+	gob.Register(data.User{}) // TODO: check if it's really necessary to initialize the redis every time new custom type is added or edited to data.
 
 	session := scs.New()
 	session.Store = redisstore.New(initRedis())    // set redis as the session store
