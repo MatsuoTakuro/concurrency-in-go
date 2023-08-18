@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"log"
 	"sync"
 	"time"
 
@@ -18,21 +19,31 @@ const (
 	EMAIL_BODY            = "body"
 )
 
+type EncryptType string
+
+const (
+	TLS  EncryptType = "tls"
+	SSL  EncryptType = "ssl"
+	NONE EncryptType = "none"
+)
+
 var EmailBaseTemplate = "./cmd/web/templates/%s.html.gohtml"
 
-type Mail struct {
-	Domain      string
-	Host        string
-	Port        int
-	Username    string
-	Password    string
-	EncryptType string
-	FromAddress string
-	FromName    string
-	Wait        *sync.WaitGroup
-	MailerChan  chan Message
-	Error       chan error
-	Done        chan bool
+type Mailer struct {
+	Domain        string
+	Host          string
+	Port          uint
+	Username      string
+	Password      string
+	Encrypt       EncryptType
+	FromAddress   string
+	FromName      string
+	Send          *sync.WaitGroup
+	MsgChan       chan Message
+	ErrChan       chan error
+	Stop          chan bool
+	AcceptMessage bool
+	mutex         sync.RWMutex
 }
 
 type Message struct {
@@ -46,10 +57,12 @@ type Message struct {
 	Template    string // Template is a template to render for the email body.
 }
 
-func (m *Mail) sendMail(
+func (m *Mailer) sendMail(
 	msg Message,
-	errorChan chan<- error, // error channel to send errors
+	errChan chan<- error, // send error
 ) {
+	defer m.Send.Done()
+
 	if msg.Template == "" {
 		msg.Template = EMAIL_TEMPLATE
 	}
@@ -65,17 +78,17 @@ func (m *Mail) sendMail(
 
 	htmlMsg, err := m.buildHTMLMessage(msg)
 	if err != nil {
-		errorChan <- err
+		errChan <- err
 	}
 
 	plainMsg, err := m.buildPlainTextMessage(msg)
 	if err != nil {
-		errorChan <- err
+		errChan <- err
 	}
 
 	smtpServ := mail.NewSMTPClient()
 	smtpServ.Host = m.Host
-	smtpServ.Port = m.Port
+	smtpServ.Port = int(m.Port)
 	smtpServ.Username = m.Username
 	smtpServ.Password = m.Password
 	smtpServ.Encryption = m.getEncryption()
@@ -87,7 +100,7 @@ func (m *Mail) sendMail(
 
 	smtpCli, err := smtpServ.Connect()
 	if err != nil {
-		errorChan <- err
+		errChan <- err
 	}
 
 	email := mail.NewMSG()
@@ -105,11 +118,12 @@ func (m *Mail) sendMail(
 
 	err = email.Send(smtpCli)
 	if err != nil {
-		errorChan <- err
+		errChan <- err
 	}
+	log.Printf("Email successfully sent to %s. Subject: \"%s\". Message: \"%s\"\n", msg.To, msg.Subject, msg.Data)
 }
 
-func (m *Mail) buildHTMLMessage(msg Message) (string, error) {
+func (m *Mailer) buildHTMLMessage(msg Message) (string, error) {
 	baseTmpl := fmt.Sprintf(EmailBaseTemplate, msg.Template)
 
 	htmlTmpl, err := template.New(EMAIL_HTML_TPML_NAME).ParseFiles(baseTmpl)
@@ -131,7 +145,7 @@ func (m *Mail) buildHTMLMessage(msg Message) (string, error) {
 	return htmlCSSMsg, nil
 }
 
-func (m *Mail) buildPlainTextMessage(msg Message) (string, error) {
+func (m *Mailer) buildPlainTextMessage(msg Message) (string, error) {
 	baseTmpl := fmt.Sprintf(EmailBaseTemplate, msg.Template)
 
 	plainTmpl, err := template.New(EMAIL_PLAIN_TPML_NAME).ParseFiles(baseTmpl)
@@ -149,7 +163,7 @@ func (m *Mail) buildPlainTextMessage(msg Message) (string, error) {
 	return plainMsg, nil
 }
 
-func (m *Mail) inlineCSS(html string) (string, error) {
+func (m *Mailer) inlineCSS(html string) (string, error) {
 	opts := premailer.Options{
 		RemoveClasses:     false,
 		CssToAttributes:   false,
@@ -199,13 +213,13 @@ func (m *Mail) inlineCSS(html string) (string, error) {
 	return htmlCSS, nil
 }
 
-func (m *Mail) getEncryption() mail.Encryption {
-	switch m.EncryptType {
-	case "tls":
+func (m *Mailer) getEncryption() mail.Encryption {
+	switch m.Encrypt {
+	case TLS:
 		return mail.EncryptionSTARTTLS
-	case "ssl":
+	case SSL:
 		return mail.EncryptionSSLTLS
-	case "none":
+	case NONE:
 		return mail.EncryptionNone
 	default:
 		return mail.EncryptionSTARTTLS
@@ -238,4 +252,24 @@ func (m *Mail) getEncryption() mail.Encryption {
 	the requirements of the email server you're connecting to. Many email servers support both options,
 	so you might also consider factors like compatibility with other systems, organizational policies, or specific security requirements.
 	*/
+}
+
+func (m *Mailer) stopAcceptingMessage() {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	m.AcceptMessage = false
+	close(m.MsgChan)
+}
+
+func (m *Mailer) canAcceptMessage() bool {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	return m.AcceptMessage
+}
+
+func (m *Mailer) terminate() {
+	close(m.ErrChan)
+	close(m.Stop)
 }

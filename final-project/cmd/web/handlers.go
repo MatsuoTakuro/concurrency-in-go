@@ -52,6 +52,13 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !isValidPassword {
+		msg := Message{
+			To:      email,
+			Subject: "Failed log in attempt",
+			Data:    "Invalid login attempt!",
+		}
+		s.sendEmail(msg)
+
 		s.Session.Put(r.Context(), ERROR_CTX, INVALID_CREDS_MSG)
 		http.Redirect(w, r, LOGIN_PATH, http.StatusSeeOther)
 		return

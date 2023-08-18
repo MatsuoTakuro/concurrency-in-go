@@ -19,8 +19,9 @@ type Server struct {
 	DB       *sql.DB
 	InfoLog  *log.Logger
 	ErrorLog *log.Logger
-	Shutdown *sync.WaitGroup
+	SentMail *sync.WaitGroup
 	Models   data.Models
+	Mailer   Mailer
 }
 
 func (s *Server) serve() {
@@ -32,6 +33,69 @@ func (s *Server) serve() {
 	s.InfoLog.Printf("Starting web server... at http://localhost:%s\n", WEB_PORT)
 	if err := srv.ListenAndServe(); err != nil {
 		log.Panic(err)
+	}
+}
+
+func (s *Server) initMailer() {
+	err := make(chan error)
+	msg := make(chan Message, 100)
+	stop := make(chan bool)
+
+	s.Mailer = Mailer{
+		Domain:        "localhost",
+		Host:          "localhost",
+		Port:          1025,
+		Username:      "",
+		Password:      "",
+		Encrypt:       NONE,
+		FromAddress:   "info@mycompany.com",
+		FromName:      "Info",
+		Send:          s.SentMail,
+		MsgChan:       msg,
+		ErrChan:       err,
+		Stop:          stop,
+		AcceptMessage: true,
+		mutex:         sync.RWMutex{},
+	}
+	s.InfoLog.Printf("You may see sent mails at http://%s:%d\n", s.Mailer.Host, 8025)
+}
+
+func (s *Server) listenForMail() {
+	for {
+		/*
+			The select statement in the listenForMail method will decide which case to block or unblock
+			based on the availability of data on the channels associated with each case.
+			If there is data available on more than one channel associated with the cases in the select statement,
+			the select statement will choose one of the cases at random to execute.
+		*/
+		select {
+		case msg := <-s.Mailer.MsgChan:
+			/*
+				There is data available on the s.Mailer.MsgChan channel if there is a message that can be received from the channel without blocking.
+				This means that there is at least one message in the channel's buffer, or that there is a sender that is currently sending a message to the channel.
+				If there is no data available on the s.Mailer.MsgChan channel, the select statement will block until data becomes available on the channel.
+			*/
+			go s.Mailer.sendMail(msg, s.Mailer.ErrChan)
+
+		case err := <-s.Mailer.ErrChan:
+			/*
+				There is data available on the s.Mailer.ErrChan channel if there is an error that can be received from the channel without blocking.
+				This means that there is at least one error in the channel's buffer, or that there is a sender that is currently sending an error to the channel.
+				If there is no data available on the s.Mailer.ErrChan channel, the select statement will block until data becomes available on the channel.
+			*/
+			s.ErrorLog.Println(err)
+
+		case <-s.Mailer.Stop:
+			/*
+				If a signal is received on the s.Mailer.Stop channel, the select statement will execute the logic in this case.
+				If there is no signal on the s.Mailer.Stop channel, the select statement will block until a signal is received on the channel.
+			*/
+			s.InfoLog.Println("stopping sending mails...")
+			return
+
+			// default:
+			// If there is no data available on any of the channels, the select statement will execute the logic in the default case.
+		}
 	}
 }
 
@@ -72,12 +136,26 @@ func (s *Server) listenForShutdown() {
 	*/
 }
 
+// shutdown gracefully shuts down the server
+// closed is to receive a signal that mailer has closed
 func (s *Server) shutdown() {
 	// perform any cleanup tasks
 	s.InfoLog.Println("would run cleanup tasks...")
 
-	// block until waitgroup is empty
-	s.Shutdown.Wait()
-	s.InfoLog.Println("closing channels and shutting down application...")
+	// stop accepting mails
+	s.InfoLog.Println("stopping accepting new message to send...")
+	s.Mailer.stopAcceptingMessage()
+
+	// wait until all unsent mails queued in message channel are sent
+	s.SentMail.Wait()
+	s.Mailer.Stop <- true // send a signal to stop listening for mails after all mails are sent.
+	// if you send the signal before all mails are sent, you may lose some mails.
+	// because in the listenForMail method, the `select` may choose the `case` that is waiting for a signal to stop listening for mails at random to execute,
+	// not the `case` that is waiting for message to send via another channel.
+
+	s.InfoLog.Println("terminating mailer...")
+	s.Mailer.terminate()
+
+	s.InfoLog.Println("shutting down application...")
 	os.Exit(0)
 }

@@ -26,6 +26,7 @@ func NewBarberShop(doneChan chan bool, clientChan chan string) *BarberShop {
 
 // Open opens the barbershop for business.
 // It will close the shop after a certain amount of time.
+// closed is to send a signal that the shop is closed with no clients left.
 func (s *BarberShop) Open(openTime time.Duration, shopClosing, closed chan<- bool) {
 
 	s.open()

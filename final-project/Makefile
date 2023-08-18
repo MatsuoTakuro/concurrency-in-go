@@ -57,3 +57,7 @@ session_in:
 	@echo "Access the redis as session store..."
 	redis-cli -h 127.0.0.1 -p 6399
 	@echo "Finished access to the redis!"
+
+## login: login to the application
+login:
+	curl -X POST -d "email=admin@example.com&password=yourpassword" http://localhost:80/login

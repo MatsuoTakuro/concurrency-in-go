@@ -24,7 +24,7 @@ func main() {
 	// create channels
 
 	// create waitgroup
-	wg := sync.WaitGroup{}
+	sentMail := sync.WaitGroup{}
 
 	// set up the server
 	srv := Server{
@@ -32,11 +32,13 @@ func main() {
 		DB:       db,
 		InfoLog:  infoLogger,
 		ErrorLog: errLogger,
-		Shutdown: &wg,
+		SentMail: &sentMail,
 		Models:   data.New(db),
 	}
 
 	// set up mail
+	srv.initMailer()
+	go srv.listenForMail()
 
 	// listen for signals
 	go srv.listenForShutdown()
