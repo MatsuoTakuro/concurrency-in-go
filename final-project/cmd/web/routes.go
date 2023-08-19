@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	HOGE_PATH     = "/"
+	HOME_PATH     = "/"
 	LOGIN_PATH    = "/login"
 	LOGOUT_PATH   = "/logout"
 	REGISTER_PATH = "/register"
@@ -22,7 +22,7 @@ func (s *Server) routes() http.Handler {
 	mux.Use(middleware.Recoverer) // recover from panic, log the panic error and return a 500 response
 	mux.Use(s.SessionLoad)
 
-	mux.Get(HOGE_PATH, s.HomePage)
+	mux.Get(HOME_PATH, s.HomePage)
 	mux.Get(LOGIN_PATH, s.LoginPage)
 	mux.Post(LOGIN_PATH, s.Login)
 	mux.Get(LOGOUT_PATH, s.Logout)

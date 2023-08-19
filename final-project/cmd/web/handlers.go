@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"html/template"
 	"net/http"
 	"net/url"
@@ -19,6 +20,10 @@ const (
 	SUCCESSFUL_LOGIN_MSG         = "Successful login!"
 	UNSUCCESSFUL_CREATE_USER_MSG = "Unable to create user."
 	CONFIRMATION_EMAIL_SENT_MSG  = "Confirmation email sent. Check your email."
+	INVALID_TOKEN_MSG            = "Invalid token."
+	NOT_FOUND_USER_MSG           = "No user found."
+	UNSUCCESSFUL_UPDATE_USER_MSG = "Unable to update user."
+	ACCOUNT_ACTIVATED_MSG        = "Account activated. You can now log in."
 )
 
 func (s *Server) HomePage(w http.ResponseWriter, r *http.Request) {
@@ -76,7 +81,7 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 	s.Session.Put(r.Context(), FLASH_CTX, SUCCESSFUL_LOGIN_MSG)
 
 	// redirect the user to the home page
-	http.Redirect(w, r, HOGE_PATH, http.StatusSeeOther)
+	http.Redirect(w, r, HOME_PATH, http.StatusSeeOther)
 }
 
 func (s *Server) Logout(w http.ResponseWriter, r *http.Request) {
@@ -143,6 +148,32 @@ func (s *Server) RegisterUser(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) ActivateUserAccount(w http.ResponseWriter, r *http.Request) {
 	// validate url
+	url := r.RequestURI
+	// NOTE: originally, scheme and host should be in an environment variable or config file.
+	testURL := fmt.Sprintf("http://localhost%s", url)
+
+	if ok := VerifyToken(testURL); !ok {
+		s.Session.Put(r.Context(), ERROR_CTX, INVALID_TOKEN_MSG)
+		http.Redirect(w, r, HOME_PATH, http.StatusSeeOther)
+		return
+	}
+
+	u, err := s.Models.User.GetByEmail(r.URL.Query().Get(EMAIL_ATTR))
+	if err != nil {
+		s.Session.Put(r.Context(), ERROR_CTX, NOT_FOUND_USER_MSG)
+		http.Redirect(w, r, HOME_PATH, http.StatusSeeOther)
+		return
+	}
+
+	u.IsActive = data.Active
+	if err := u.Update(); err != nil {
+		s.Session.Put(r.Context(), ERROR_CTX, UNSUCCESSFUL_UPDATE_USER_MSG)
+		http.Redirect(w, r, HOME_PATH, http.StatusSeeOther)
+		return
+	}
+
+	s.Session.Put(r.Context(), FLASH_CTX, ACCOUNT_ACTIVATED_MSG)
+	http.Redirect(w, r, LOGIN_PATH, http.StatusSeeOther)
 
 	// generate an invoice
 
