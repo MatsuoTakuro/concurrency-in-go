@@ -8,11 +8,13 @@ import (
 )
 
 const (
-	HOME_PATH     = "/"
-	LOGIN_PATH    = "/login"
-	LOGOUT_PATH   = "/logout"
-	REGISTER_PATH = "/register"
-	ACTIVATE_PATH = "/activate"
+	HOME_PATH      = "/"
+	LOGIN_PATH     = "/login"
+	LOGOUT_PATH    = "/logout"
+	REGISTER_PATH  = "/register"
+	ACTIVATE_PATH  = "/activate"
+	PLANS_PATH     = "/plans"
+	SUBSCRIBE_PATH = "/subscribe"
 )
 
 func (s *Server) routes() http.Handler {
@@ -29,6 +31,8 @@ func (s *Server) routes() http.Handler {
 	mux.Get(REGISTER_PATH, s.RegisterPage)
 	mux.Post(REGISTER_PATH, s.RegisterUser)
 	mux.Get(ACTIVATE_PATH, s.ActivateUserAccount)
+	mux.Get(PLANS_PATH, s.ListOfPlans)
+	mux.Get(SUBSCRIBE_PATH, s.SubcribeToPlan)
 
 	return mux
 }

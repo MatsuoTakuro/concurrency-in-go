@@ -14,6 +14,10 @@ import (
 	"github.com/alexedwards/scs/v2"
 )
 
+const (
+	ERROR_SENDING_MAIL_MSG = "error sending mail: %w"
+)
+
 type Server struct {
 	Session  *scs.SessionManager
 	DB       *sql.DB
@@ -84,7 +88,7 @@ func (s *Server) listenForMail() {
 				This means that there is at least one error in the channel's buffer, or that there is a sender that is currently sending an error to the channel.
 				If there is no data available on the s.Mailer.ErrChan channel, the select statement will block until data becomes available on the channel.
 			*/
-			s.ErrorLog.Println(err)
+			s.ErrorLog.Println(fmt.Errorf(ERROR_SENDING_MAIL_MSG, err))
 
 		case <-s.Mailer.Stop:
 			/*

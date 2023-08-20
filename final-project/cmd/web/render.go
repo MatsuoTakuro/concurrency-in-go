@@ -1,10 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"text/template"
 	"time"
+
+	"github.com/MatsuoTakuro/final-project/data"
 )
 
 const (
@@ -17,6 +20,12 @@ const (
 	PARTIAL_NAVBAR = "navbar.partial.gohtml"
 	PARTIAL_FOOTER = "footer.partial.gohtml"
 	PARTIAL_ALERTS = "alerts.partial.gohtml"
+)
+
+const (
+	UNSUCCESSFUL_GET_SESSION_USER_MSG = "can't get user from session"
+	ERROR_PARSE_TEMPLATE_FILES_MSG    = "error parsing template files: %w"
+	ERROR_EXECUTING_TEMPLATE_MSG      = "error executing template: %w"
 )
 
 var Partials = []string{
@@ -38,7 +47,7 @@ type TemplateData struct {
 	Error         string
 	Authenticated bool
 	Now           time.Time
-	// User *data.User
+	User          *data.User
 }
 
 func (s *Server) render(
@@ -59,14 +68,14 @@ func (s *Server) render(
 	// parse the template files
 	tmpl, err := template.ParseFiles(baseTmpls...)
 	if err != nil {
-		s.ErrorLog.Println(err)
+		s.ErrorLog.Println(fmt.Errorf(ERROR_PARSE_TEMPLATE_FILES_MSG, err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// write the applied output to the response writer
 	if err := tmpl.Execute(w, s.UpdateDefaultData(td, r)); err != nil {
-		s.ErrorLog.Println(err)
+		s.ErrorLog.Println(fmt.Errorf(ERROR_EXECUTING_TEMPLATE_MSG, err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -79,7 +88,12 @@ func (s *Server) UpdateDefaultData(td *TemplateData, r *http.Request) *TemplateD
 	td.Error = s.Session.PopString(r.Context(), ERROR_CTX)
 	if s.IsAuthenticated(r) {
 		td.Authenticated = true
-		// TODO - get more user information
+		u, ok := s.Session.Get(r.Context(), USER_CTX).(data.User)
+		if !ok {
+			s.ErrorLog.Println(UNSUCCESSFUL_GET_SESSION_USER_MSG)
+		} else {
+			td.User = &u
+		}
 	}
 	td.Now = time.Now()
 
