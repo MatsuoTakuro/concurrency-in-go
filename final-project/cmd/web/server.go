@@ -16,6 +16,7 @@ import (
 
 const (
 	ERROR_SENDING_MAIL_MSG = "error sending mail: %w"
+	ERROR_SRV_PROC_JOB_MSG = "error server process job: %w"
 )
 
 type Server struct {
@@ -23,9 +24,11 @@ type Server struct {
 	DB       *sql.DB
 	InfoLog  *log.Logger
 	ErrorLog *log.Logger
-	SentMail *sync.WaitGroup
+	Wait     *sync.WaitGroup
 	Models   data.Models
 	Mailer   Mailer
+	JobErr   chan error
+	StopJob  chan bool
 }
 
 func (s *Server) serve() {
@@ -55,10 +58,10 @@ func (s *Server) initMailer() {
 		Encrypt:       NONE,
 		FromAddress:   "info@mycompany.com",
 		FromName:      "Info",
-		Send:          s.SentMail,
-		MsgChan:       msg,
-		ErrChan:       err,
-		Stop:          stop,
+		Wait:          s.Wait,
+		Msg:           msg,
+		MailErr:       err,
+		StopMail:      stop,
 		AcceptMessage: true,
 		mutex:         sync.RWMutex{},
 	}
@@ -74,15 +77,15 @@ func (s *Server) listenForMail() {
 			the select statement will choose one of the cases at random to execute.
 		*/
 		select {
-		case msg := <-s.Mailer.MsgChan:
+		case msg := <-s.Mailer.Msg:
 			/*
 				There is data available on the s.Mailer.MsgChan channel if there is a message that can be received from the channel without blocking.
 				This means that there is at least one message in the channel's buffer, or that there is a sender that is currently sending a message to the channel.
 				If there is no data available on the s.Mailer.MsgChan channel, the select statement will block until data becomes available on the channel.
 			*/
-			go s.Mailer.sendMail(msg, s.Mailer.ErrChan)
+			go s.Mailer.sendMail(msg, s.Mailer.MailErr)
 
-		case err := <-s.Mailer.ErrChan:
+		case err := <-s.Mailer.MailErr:
 			/*
 				There is data available on the s.Mailer.ErrChan channel if there is an error that can be received from the channel without blocking.
 				This means that there is at least one error in the channel's buffer, or that there is a sender that is currently sending an error to the channel.
@@ -90,7 +93,7 @@ func (s *Server) listenForMail() {
 			*/
 			s.ErrorLog.Println(fmt.Errorf(ERROR_SENDING_MAIL_MSG, err))
 
-		case <-s.Mailer.Stop:
+		case <-s.Mailer.StopMail:
 			/*
 				If a signal is received on the s.Mailer.Stop channel, the select statement will execute the logic in this case.
 				If there is no signal on the s.Mailer.Stop channel, the select statement will block until a signal is received on the channel.
@@ -104,12 +107,23 @@ func (s *Server) listenForMail() {
 	}
 }
 
+func (s *Server) listenForJobErrors() {
+	for {
+		select {
+		case err := <-s.JobErr:
+			s.ErrorLog.Println(fmt.Errorf(ERROR_SRV_PROC_JOB_MSG, err))
+		case <-s.StopJob:
+			s.InfoLog.Println("stopping listening for errors...")
+			return
+		}
+	}
+}
+
 func (s *Server) listenForShutdown() {
 	quit := make(chan os.Signal, 1) // create a channel to receive signals
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit // block until a signal is received
 	s.shutdown()
-
 	/* WARN: Use signal.NotifyContext along with context.Context in production instead!
 		This way can be considered better than using signal.Notify with a manually created channel for several reasons:
 
@@ -141,6 +155,10 @@ func (s *Server) listenForShutdown() {
 	*/
 }
 
+func (s *Server) getInvoice(u data.User, plan *data.Plan) (string, error) {
+	return plan.PlanAmountFormatted, nil
+}
+
 // shutdown gracefully shuts down the server
 // closed is to receive a signal that mailer has closed
 func (s *Server) shutdown() {
@@ -152,15 +170,20 @@ func (s *Server) shutdown() {
 	s.Mailer.stopAcceptingMessage()
 
 	// wait until all unsent mails queued in message channel are sent
-	s.SentMail.Wait()
-	s.Mailer.Stop <- true // send a signal to stop listening for mails after all mails are sent.
+	s.Wait.Wait()
+	s.Mailer.StopMail <- true // send a signal to stop listening for mails after all mails are sent.
 	// if you send the signal before all mails are sent, you may lose some mails.
 	// because in the listenForMail method, the `select` may choose the `case` that is waiting for a signal to stop listening for mails at random to execute,
 	// not `case` that is waiting for message to send via message channel that may not be empty after stopping accepting new messages to send.
 	// Or it may be in the process of sending a message with the Mailer.sendMail method.
 
+	s.StopJob <- true
+
 	s.InfoLog.Println("terminating mailer...")
 	s.Mailer.terminate()
+
+	close(s.JobErr)
+	close(s.StopJob)
 
 	s.InfoLog.Println("shutting down application...")
 	os.Exit(0)

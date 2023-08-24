@@ -33,8 +33,10 @@ func main() {
 		DB:       db,
 		InfoLog:  infoLogger,
 		ErrorLog: errLogger,
-		SentMail: &sentMail,
+		Wait:     &sentMail,
 		Models:   data.New(db),
+		JobErr:   make(chan error),
+		StopJob:  make(chan bool),
 	}
 
 	// set up mail
@@ -43,6 +45,9 @@ func main() {
 
 	// listen for signals
 	go srv.listenForShutdown()
+
+	// listen for errors
+	go srv.listenForJobErrors()
 
 	// listen for web connections
 	srv.serve()

@@ -209,9 +209,25 @@ func (s *Server) SubcribeToPlan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// generate an invoice
+	// generate an invoice and email it
+	s.Wait.Add(1) // increment counter every time a new invoice is generated
 
-	// send an email with the invoice attached
+	go func() {
+		defer s.Wait.Done() // decrement counter every time an invoice is generated and passed to the mailer to send
+
+		invoice, err := s.getInvoice(user, plan)
+		if err != nil {
+			s.JobErr <- err
+		}
+
+		msg := Message{
+			To:       user.Email,
+			Subject:  "Your invoice",
+			Data:     invoice,
+			Template: "invoice",
+		}
+		s.sendEmail(msg)
+	}()
 
 	// generate a manual
 

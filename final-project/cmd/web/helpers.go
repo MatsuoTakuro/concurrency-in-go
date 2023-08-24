@@ -6,6 +6,6 @@ func (s *Server) sendEmail(msg Message) {
 		s.InfoLog.Println("New message not accepted")
 		return
 	}
-	s.SentMail.Add(1)
-	s.Mailer.MsgChan <- msg
+	s.Wait.Add(1) // increment counter every time a new message is sent
+	s.Mailer.Msg <- msg
 }

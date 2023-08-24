@@ -46,10 +46,10 @@ type Mailer struct {
 	Encrypt       EncryptType
 	FromAddress   string
 	FromName      string
-	Send          *sync.WaitGroup
-	MsgChan       chan Message
-	ErrChan       chan error
-	Stop          chan bool
+	Wait          *sync.WaitGroup
+	Msg           chan Message
+	MailErr       chan error
+	StopMail      chan bool
 	AcceptMessage bool
 	mutex         sync.RWMutex
 }
@@ -69,7 +69,7 @@ func (m *Mailer) sendMail(
 	msg Message,
 	errChan chan<- error, // send error
 ) {
-	defer m.Send.Done()
+	defer m.Wait.Done() // decrement counter every time a message is sent
 
 	if msg.Template == "" {
 		msg.Template = MAIL
@@ -267,7 +267,7 @@ func (m *Mailer) stopAcceptingMessage() {
 	defer m.mutex.Unlock()
 
 	m.AcceptMessage = false
-	close(m.MsgChan)
+	close(m.Msg)
 }
 
 func (m *Mailer) canAcceptMessage() bool {
@@ -278,6 +278,6 @@ func (m *Mailer) canAcceptMessage() bool {
 }
 
 func (m *Mailer) terminate() {
-	close(m.ErrChan)
-	close(m.Stop)
+	close(m.MailErr)
+	close(m.StopMail)
 }
