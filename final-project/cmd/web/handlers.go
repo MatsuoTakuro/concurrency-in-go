@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/MatsuoTakuro/final-project/data"
 )
@@ -29,6 +30,8 @@ const (
 	ERROR_RENEW_TOKEN_MSG        = "error renewing token: %w"
 	ERROR_PARSE_FORM_MSG         = "error parsing form: %w"
 	ERROR_GET_ALL_PLANS_MSG      = "error getting all plans: %w"
+	LOGIN_FIRST_MSG              = "Log in first!"
+	UNSUCCESSFUL_FIND_PLAN_MSG   = "Unable to find plan."
 )
 
 func (s *Server) HomePage(w http.ResponseWriter, r *http.Request) {
@@ -187,10 +190,24 @@ func (s *Server) ActivateUserAccount(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) SubcribeToPlan(w http.ResponseWriter, r *http.Request) {
 	// get the id of the plan that is chosen
+	id := r.URL.Query().Get(PLAN_ID_CTX)
+	planID, _ := strconv.Atoi(id)
 
 	// get the plan from the database
+	plan, err := s.Models.Plan.GetOne(planID)
+	if err != nil {
+		s.Session.Put(r.Context(), ERROR_CTX, UNSUCCESSFUL_FIND_PLAN_MSG)
+		http.Redirect(w, r, membersPlanPath, http.StatusSeeOther)
+		return
+	}
 
 	// get the user from the session
+	user, ok := s.Session.Get(r.Context(), USER_CTX).(data.User)
+	if !ok {
+		s.Session.Put(r.Context(), ERROR_CTX, LOGIN_FIRST_MSG)
+		http.Redirect(w, r, LOGIN_PATH, http.StatusSeeOther)
+		return
+	}
 
 	// generate an invoice
 
@@ -206,20 +223,6 @@ func (s *Server) SubcribeToPlan(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) ListOfPlans(w http.ResponseWriter, r *http.Request) {
-	if !s.Session.Exists(r.Context(), USER_ID_CTX) {
-		s.Session.Put(r.Context(), WARNING_CTX, NEED_TO_LOGIN_FOR_PLANS_MSG)
-		http.Redirect(w, r, LOGIN_PATH, http.StatusTemporaryRedirect)
-		/* NOTE: status code 307 (vs 303)
-			In the case of a 307 Temporary Redirect, the client should continue to use the original URL for future requests.
-		This means that the client should use the same URL that was used in the original request, including the same HTTP method, headers, and body.
-
-			In the example code you provided, the original URL for future requests is the URL that the client used to access the listOfPlans handler.
-		When the client is redirected to the login page, the http.Redirect function is called with the original request (r) and a 307 Temporary Redirect status code.
-		This ensures that the client continues to use the original URL for future requests, including any query parameters, headers, and request body.
-		*/
-		return
-	}
-
 	plans, err := s.Models.Plan.GetAll()
 	if err != nil {
 		s.ErrorLog.Println(fmt.Errorf(ERROR_GET_ALL_PLANS_MSG, err))

@@ -13,9 +13,13 @@ const (
 	LOGOUT_PATH    = "/logout"
 	REGISTER_PATH  = "/register"
 	ACTIVATE_PATH  = "/activate"
+	MEMBERS_PATH   = "/members"
 	PLANS_PATH     = "/plans"
 	SUBSCRIBE_PATH = "/subscribe"
 )
+
+var membersPlanPath string = MEMBERS_PATH + PLANS_PATH
+var membersSubscribePath string = MEMBERS_PATH + SUBSCRIBE_PATH
 
 func (s *Server) routes() http.Handler {
 
@@ -31,6 +35,17 @@ func (s *Server) routes() http.Handler {
 	mux.Get(REGISTER_PATH, s.RegisterPage)
 	mux.Post(REGISTER_PATH, s.RegisterUser)
 	mux.Get(ACTIVATE_PATH, s.ActivateUserAccount)
+
+	// attach membershipRouter as a subrouter to root router
+	mux.Mount(MEMBERS_PATH, s.membershipRouter())
+
+	return mux
+}
+
+func (s *Server) membershipRouter() http.Handler {
+	mux := chi.NewRouter()
+	mux.Use(s.Auth)
+
 	mux.Get(PLANS_PATH, s.ListOfPlans)
 	mux.Get(SUBSCRIBE_PATH, s.SubcribeToPlan)
 

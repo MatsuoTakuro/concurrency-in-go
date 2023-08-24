@@ -7,6 +7,7 @@ const (
 	ERROR_CTX   = "error"
 	USER_ID_CTX = "user_id"
 	USER_CTX    = "user"
+	PLAN_ID_CTX = "id"
 )
 
 // XXX_ATTR is an attribute or element's name embedded in html.
