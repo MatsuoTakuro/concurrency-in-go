@@ -25,18 +25,18 @@ func main() {
 	// create channels
 
 	// create waitgroup
-	sentMail := sync.WaitGroup{}
+	asyncJob := sync.WaitGroup{}
 
 	// set up the server
 	srv := Server{
-		Session:  session,
-		DB:       db,
-		InfoLog:  infoLogger,
-		ErrorLog: errLogger,
-		Wait:     &sentMail,
-		Models:   data.New(db),
-		JobErr:   make(chan error),
-		StopJob:  make(chan bool),
+		Session:   session,
+		DB:        db,
+		InfoLog:   infoLogger,
+		ErrorLog:  errLogger,
+		Models:    data.New(db),
+		AsyncJob:  &asyncJob,
+		AsyncErr:  make(chan error),
+		StopAsync: make(chan bool),
 	}
 
 	// set up mail
@@ -47,7 +47,7 @@ func main() {
 	go srv.listenForShutdown()
 
 	// listen for errors
-	go srv.listenForJobErrors()
+	go srv.listenForAsyncJobErrors()
 
 	// listen for web connections
 	srv.serve()

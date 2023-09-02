@@ -8,8 +8,10 @@ import (
 	"strconv"
 
 	"github.com/MatsuoTakuro/final-project/data"
+	mail "github.com/xhit/go-simple-mail/v2"
 )
 
+// XXX_PAGE is the name of the template gohtml file to render for the page
 const (
 	HOME_PAGE     = "home.page.gohtml"
 	LOGIN_PAGE    = "login.page.gohtml"
@@ -17,13 +19,15 @@ const (
 	PLANS_PAGE    = "plans.page.gohtml"
 )
 
+// XXX_MSG is the message to display to the user or to log for you
 const (
 	INVALID_CREDS_MSG            = "Invalid credentials."
 	SUCCESSFUL_LOGIN_MSG         = "Successful login!"
 	UNSUCCESSFUL_CREATE_USER_MSG = "Unable to create user."
 	CONFIRMATION_EMAIL_SENT_MSG  = "Confirmation email sent. Check your email."
 	INVALID_TOKEN_MSG            = "Invalid token."
-	NOT_FOUND_USER_MSG           = "No user found."
+	NOT_FOUND_USER_BY_EMAIL_MSG  = "No user found with that email."
+	NOT_FOUND_USER_BY_ID_MSG     = "No user found with that id."
 	UNSUCCESSFUL_UPDATE_USER_MSG = "Unable to update user."
 	ACCOUNT_ACTIVATED_MSG        = "Account activated. You can now log in."
 	NEED_TO_LOGIN_FOR_PLANS_MSG  = "You must be logged in to view this page."
@@ -32,6 +36,8 @@ const (
 	ERROR_GET_ALL_PLANS_MSG      = "error getting all plans: %w"
 	LOGIN_FIRST_MSG              = "Log in first!"
 	UNSUCCESSFUL_FIND_PLAN_MSG   = "Unable to find plan."
+	SUCCESSFUL_SUBSCRIBE_MSG     = "Subscribed!"
+	UNSUCCESSFUL_SUBSCRIBE_MSG   = "Unable to subscribe."
 )
 
 func (s *Server) HomePage(w http.ResponseWriter, r *http.Request) {
@@ -172,7 +178,7 @@ func (s *Server) ActivateUserAccount(w http.ResponseWriter, r *http.Request) {
 
 	u, err := s.Models.User.GetByEmail(r.URL.Query().Get(EMAIL_ATTR))
 	if err != nil {
-		s.Session.Put(r.Context(), ERROR_CTX, NOT_FOUND_USER_MSG)
+		s.Session.Put(r.Context(), ERROR_CTX, NOT_FOUND_USER_BY_EMAIL_MSG)
 		http.Redirect(w, r, HOME_PATH, http.StatusSeeOther)
 		return
 	}
@@ -210,14 +216,13 @@ func (s *Server) SubcribeToPlan(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// generate an invoice and email it
-	s.Wait.Add(1) // increment counter every time a new invoice is generated
-
+	s.AsyncJob.Add(1) // increment counter every time a new invoice is generated
 	go func() {
-		defer s.Wait.Done() // decrement counter every time an invoice is generated and passed to the mailer to send
+		defer s.AsyncJob.Done() // decrement counter every time an invoice is generated and passed to the mailer to send
 
 		invoice, err := s.getInvoice(user, plan)
 		if err != nil {
-			s.JobErr <- err
+			s.AsyncErr <- err
 		}
 
 		msg := Message{
@@ -230,12 +235,53 @@ func (s *Server) SubcribeToPlan(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	// generate a manual
+	s.AsyncJob.Add(1) // increment counter every time a new manual is generated
+	go func() {
+		defer s.AsyncJob.Done() // decrement counter every time a manual is generated and passed to the mailer to send
 
-	// send an email with the manual attached
+		pdf := s.generateManual(user, plan)
+		filePath := fmt.Sprintf(MANUAL_OUTPUT_TEMP_PATH, user.ID)
+		err := pdf.OutputFileAndClose(filePath)
+		if err != nil {
+			s.AsyncErr <- err
+			return
+		}
 
-	// subscribe the user to an account
+		msg := Message{
+			To:      user.Email,
+			Subject: "Your manual",
+			Data:    "Your user manual is attached",
+			Attachments: []*mail.File{
+				{
+					Name:     MANUAL_ATTCH_NAME,
+					FilePath: filePath,
+				},
+			},
+		}
+
+		s.sendEmail(msg)
+	}()
+
+	// subscribe the user to a plan
+	err = s.Models.Plan.SubscribeUserToPlan(user, *plan)
+	if err != nil {
+		s.Session.Put(r.Context(), ERROR_CTX, UNSUCCESSFUL_SUBSCRIBE_MSG)
+		http.Redirect(w, r, membersPlanPath, http.StatusSeeOther)
+		return
+	}
+
+	u, err := s.Models.User.GetOne(user.ID)
+	if err != nil {
+		s.Session.Put(r.Context(), ERROR_CTX, NOT_FOUND_USER_BY_ID_MSG)
+		http.Redirect(w, r, membersPlanPath, http.StatusSeeOther)
+		return
+	}
+
+	s.Session.Put(r.Context(), USER_CTX, u)
 
 	// redirect
+	s.Session.Put(r.Context(), FLASH_CTX, SUCCESSFUL_SUBSCRIBE_MSG)
+	http.Redirect(w, r, membersPlanPath, http.StatusSeeOther)
 }
 
 func (s *Server) ListOfPlans(w http.ResponseWriter, r *http.Request) {

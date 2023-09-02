@@ -46,7 +46,7 @@ type Mailer struct {
 	Encrypt       EncryptType
 	FromAddress   string
 	FromName      string
-	Wait          *sync.WaitGroup
+	AsyncMail     *sync.WaitGroup
 	Msg           chan Message
 	MailErr       chan error
 	StopMail      chan bool
@@ -59,7 +59,7 @@ type Message struct {
 	FromName    string
 	To          string
 	Subject     string
-	Attachments []string
+	Attachments []*mail.File
 	Data        any
 	DataMap     map[string]any
 	Template    Template
@@ -69,7 +69,7 @@ func (m *Mailer) sendMail(
 	msg Message,
 	errChan chan<- error, // send error
 ) {
-	defer m.Wait.Done() // decrement counter every time a message is sent
+	defer m.AsyncMail.Done() // decrement counter every time a message is sent
 
 	if msg.Template == "" {
 		msg.Template = MAIL
@@ -79,10 +79,11 @@ func (m *Mailer) sendMail(
 		msg.From = m.FromAddress
 	}
 
-	data := map[string]any{
-		"message": msg.Data,
+	if len(msg.DataMap) == 0 {
+		msg.DataMap = make(map[string]any)
 	}
-	msg.DataMap = data
+
+	msg.DataMap["message"] = msg.Data
 
 	htmlMsg, err := m.buildHTMLMessage(msg)
 	if err != nil {
@@ -120,7 +121,7 @@ func (m *Mailer) sendMail(
 
 	if len(msg.Attachments) > 0 {
 		for _, a := range msg.Attachments {
-			email.AddAttachment(a)
+			email.Attach(a)
 		}
 	}
 

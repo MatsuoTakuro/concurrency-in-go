@@ -9,26 +9,36 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/MatsuoTakuro/final-project/data"
 	"github.com/alexedwards/scs/v2"
+
+	"github.com/phpdave11/gofpdf"
+	"github.com/phpdave11/gofpdf/contrib/gofpdi"
 )
 
 const (
 	ERROR_SENDING_MAIL_MSG = "error sending mail: %w"
-	ERROR_SRV_PROC_JOB_MSG = "error server process job: %w"
+	ERROR_ASYNC_JOB_MSG    = "error asynchronously processing job: %w"
+)
+
+const (
+	MANUAL_TMPL_PATH        = "./pdf/manual.pdf"
+	MANUAL_OUTPUT_TEMP_PATH = "./tmp/%d_manual.pdf" // %d is a placeholder for user id
+	MANUAL_ATTCH_NAME       = "manual.pdf"
 )
 
 type Server struct {
-	Session  *scs.SessionManager
-	DB       *sql.DB
-	InfoLog  *log.Logger
-	ErrorLog *log.Logger
-	Wait     *sync.WaitGroup
-	Models   data.Models
-	Mailer   Mailer
-	JobErr   chan error
-	StopJob  chan bool
+	Session   *scs.SessionManager
+	DB        *sql.DB
+	InfoLog   *log.Logger
+	ErrorLog  *log.Logger
+	Models    data.Models
+	Mailer    Mailer
+	AsyncJob  *sync.WaitGroup
+	AsyncErr  chan error
+	StopAsync chan bool
 }
 
 func (s *Server) serve() {
@@ -44,9 +54,9 @@ func (s *Server) serve() {
 }
 
 func (s *Server) initMailer() {
-	err := make(chan error)
+	mailErr := make(chan error)
 	msg := make(chan Message, 100)
-	stop := make(chan bool)
+	stopMail := make(chan bool)
 
 	// NOTE: of course, originally, domain, host or port should be in an environment variable or config file.
 	s.Mailer = Mailer{
@@ -58,10 +68,10 @@ func (s *Server) initMailer() {
 		Encrypt:       NONE,
 		FromAddress:   "info@mycompany.com",
 		FromName:      "Info",
-		Wait:          s.Wait,
+		AsyncMail:     s.AsyncJob, // pass the same waitgroup to the mailer
 		Msg:           msg,
-		MailErr:       err,
-		StopMail:      stop,
+		MailErr:       mailErr,
+		StopMail:      stopMail,
 		AcceptMessage: true,
 		mutex:         sync.RWMutex{},
 	}
@@ -107,12 +117,12 @@ func (s *Server) listenForMail() {
 	}
 }
 
-func (s *Server) listenForJobErrors() {
+func (s *Server) listenForAsyncJobErrors() {
 	for {
 		select {
-		case err := <-s.JobErr:
-			s.ErrorLog.Println(fmt.Errorf(ERROR_SRV_PROC_JOB_MSG, err))
-		case <-s.StopJob:
+		case err := <-s.AsyncErr:
+			s.ErrorLog.Println(fmt.Errorf(ERROR_ASYNC_JOB_MSG, err))
+		case <-s.StopAsync:
 			s.InfoLog.Println("stopping listening for errors...")
 			return
 		}
@@ -159,6 +169,33 @@ func (s *Server) getInvoice(u data.User, plan *data.Plan) (string, error) {
 	return plan.PlanAmountFormatted, nil
 }
 
+func (s *Server) generateManual(u data.User, plan *data.Plan) *gofpdf.Fpdf {
+
+	// "P" means portrait, "mm" means millimeters, "Letter" means letter size paper, "" means default font family
+	pdf := gofpdf.New("P", "mm", "Letter", "")
+	pdf.SetMargins(10, 13, 10) // left, top, right
+
+	importer := gofpdi.NewImporter()
+
+	time.Sleep(5 * time.Second) // simulate a long time to create a PDF
+
+	tmplID := importer.ImportPage(pdf, MANUAL_TMPL_PATH, 1, "/MediaBox") // import page 1 of the manual.pdf
+	pdf.AddPage()
+
+	importer.UseImportedTemplate(pdf, tmplID, 0, 0, 215.9, 0) // x, y, width, height
+
+	pdf.SetX(75)  // set x position
+	pdf.SetY(150) // set y position
+
+	pdf.SetFont("Arial", "", 12) // font family, style("B"=bold), size
+	// width, height, text, border, align("C"=center), fill, link
+	pdf.MultiCell(0, 4, fmt.Sprintf("%s %s", u.FirstName, u.LastName), "", "C", false)
+	pdf.Ln(5) // line break
+	pdf.MultiCell(0, 4, fmt.Sprintf("%s User Guide", plan.PlanName), "", "C", false)
+
+	return pdf
+}
+
 // shutdown gracefully shuts down the server
 // closed is to receive a signal that mailer has closed
 func (s *Server) shutdown() {
@@ -170,20 +207,20 @@ func (s *Server) shutdown() {
 	s.Mailer.stopAcceptingMessage()
 
 	// wait until all unsent mails queued in message channel are sent
-	s.Wait.Wait()
+	s.AsyncJob.Wait()
 	s.Mailer.StopMail <- true // send a signal to stop listening for mails after all mails are sent.
 	// if you send the signal before all mails are sent, you may lose some mails.
 	// because in the listenForMail method, the `select` may choose the `case` that is waiting for a signal to stop listening for mails at random to execute,
 	// not `case` that is waiting for message to send via message channel that may not be empty after stopping accepting new messages to send.
 	// Or it may be in the process of sending a message with the Mailer.sendMail method.
 
-	s.StopJob <- true
+	s.StopAsync <- true
 
 	s.InfoLog.Println("terminating mailer...")
 	s.Mailer.terminate()
 
-	close(s.JobErr)
-	close(s.StopJob)
+	close(s.AsyncErr)
+	close(s.StopAsync)
 
 	s.InfoLog.Println("shutting down application...")
 	os.Exit(0)
