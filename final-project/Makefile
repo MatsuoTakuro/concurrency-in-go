@@ -44,7 +44,11 @@ restart: stop start
 
 ## test: runs all tests
 test:
-	go test -v ./...
+	go test -v ./... -count=1
+
+coverage:
+	go test ./... -coverprofile=./coverage.out
+	go tool cover -html=coverage.out
 
 ## db_in: access the database
 db_in:

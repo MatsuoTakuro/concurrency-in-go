@@ -15,8 +15,8 @@ func New(dbPool *sql.DB) Models {
 	db = dbPool
 
 	return Models{
-		User: User{}, // allows us to use methods on the User type through the Models
-		Plan: Plan{}, // allows us to use methods on the Plan type through the Models
+		User: &User{}, // allows us to use methods on the User type through the Models
+		Plan: &Plan{}, // allows us to use methods on the Plan type through the Models
 	}
 }
 
@@ -24,6 +24,6 @@ func New(dbPool *sql.DB) Models {
 // in this type is available to us throughout the application, anywhere that the
 // app variable is used, provided that the model is also added in the New function.
 type Models struct {
-	User User
-	Plan Plan
+	User UserInterface
+	Plan PlanInterface
 }

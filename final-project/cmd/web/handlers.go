@@ -69,7 +69,7 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	isValidPassword, err := user.PasswordMatches(password)
+	isValidPassword, err := s.Models.User.PasswordMatches(password)
 	if err != nil {
 		s.Session.Put(r.Context(), ERROR_CTX, INVALID_CREDS_MSG)
 		http.Redirect(w, r, LOGIN_PATH, http.StatusSeeOther)
@@ -130,7 +130,7 @@ func (s *Server) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		IsAdmin:   data.NotAdmin,
 	}
 
-	_, err = u.Insert(u)
+	_, err = s.Models.User.Insert(u)
 	if err != nil {
 		s.Session.Put(r.Context(), ERROR_CTX, UNSUCCESSFUL_CREATE_USER_MSG)
 		http.Redirect(w, r, REGISTER_PATH, http.StatusSeeOther)
@@ -184,7 +184,7 @@ func (s *Server) ActivateUserAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	u.IsActive = data.Active
-	if err := u.Update(); err != nil {
+	if err := s.Models.User.Update(*u); err != nil {
 		s.Session.Put(r.Context(), ERROR_CTX, UNSUCCESSFUL_UPDATE_USER_MSG)
 		http.Redirect(w, r, HOME_PATH, http.StatusSeeOther)
 		return

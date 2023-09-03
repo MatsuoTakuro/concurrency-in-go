@@ -30,6 +30,7 @@ func TestMain(m *testing.M) {
 		InfoLog:   log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime),
 		ErrorLog:  log.New(os.Stdout, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile),
 		AsyncJob:  &sync.WaitGroup{},
+		Models:    data.TestNew(nil),
 		AsyncErr:  make(chan error),
 		StopAsync: make(chan bool),
 	}

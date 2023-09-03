@@ -55,7 +55,6 @@ func (s *Server) render(
 	var baseTmpls []string
 	baseTmpls = append(baseTmpls, filepath.Join(TargetTmplPath, targetHTML))
 	baseTmpls = append(baseTmpls, getPartials(TargetTmplPath)...)
-	fmt.Println(baseTmpls)
 
 	if td == nil {
 		td = &TemplateData{}
