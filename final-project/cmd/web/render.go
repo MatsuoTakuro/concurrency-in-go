@@ -10,6 +10,9 @@ import (
 	"github.com/MatsuoTakuro/final-project/data"
 )
 
+// TargetTmplPath is the path to the templates and can be switched out for testing
+var TargetTmplPath = TEMPLATE_PATH
+
 const (
 	TEMPLATE_PATH = "./cmd/web/templates"
 )
@@ -27,14 +30,6 @@ const (
 	ERROR_PARSE_TEMPLATE_FILES_MSG    = "error parsing template files: %w"
 	ERROR_EXECUTING_TEMPLATE_MSG      = "error executing template: %w"
 )
-
-var Partials = []string{
-	filepath.Join(TEMPLATE_PATH, BASE_LAYOUT),
-	filepath.Join(TEMPLATE_PATH, PARTIAL_HEADER),
-	filepath.Join(TEMPLATE_PATH, PARTIAL_NAVBAR),
-	filepath.Join(TEMPLATE_PATH, PARTIAL_FOOTER),
-	filepath.Join(TEMPLATE_PATH, PARTIAL_ALERTS),
-}
 
 // TemplateData holds data sent from handlers to templates
 type TemplateData struct {
@@ -58,8 +53,9 @@ func (s *Server) render(
 ) {
 
 	var baseTmpls []string
-	baseTmpls = append(baseTmpls, filepath.Join(TEMPLATE_PATH, targetHTML))
-	baseTmpls = append(baseTmpls, Partials...)
+	baseTmpls = append(baseTmpls, filepath.Join(TargetTmplPath, targetHTML))
+	baseTmpls = append(baseTmpls, getPartials(TargetTmplPath)...)
+	fmt.Println(baseTmpls)
 
 	if td == nil {
 		td = &TemplateData{}
@@ -81,7 +77,16 @@ func (s *Server) render(
 	}
 }
 
-//
+func getPartials(tmplPath string) []string {
+	return []string{
+		filepath.Join(tmplPath, BASE_LAYOUT),
+		filepath.Join(tmplPath, PARTIAL_HEADER),
+		filepath.Join(tmplPath, PARTIAL_NAVBAR),
+		filepath.Join(tmplPath, PARTIAL_FOOTER),
+		filepath.Join(tmplPath, PARTIAL_ALERTS),
+	}
+}
+
 func (s *Server) UpdateDefaultData(td *TemplateData, r *http.Request) *TemplateData {
 	td.Flash = s.Session.PopString(r.Context(), FLASH_CTX)
 	td.Warning = s.Session.PopString(r.Context(), WARNING_CTX)

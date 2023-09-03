@@ -18,8 +18,8 @@ const (
 	SUBSCRIBE_PATH = "/subscribe"
 )
 
-var membersPlanPath string = MEMBERS_PATH + PLANS_PATH
-var membersSubscribePath string = MEMBERS_PATH + SUBSCRIBE_PATH
+var MembersPlanPath string = MEMBERS_PATH + PLANS_PATH
+var MembersSubscribePath string = MEMBERS_PATH + SUBSCRIBE_PATH
 
 func (s *Server) routes() http.Handler {
 

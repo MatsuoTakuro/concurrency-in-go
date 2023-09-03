@@ -203,7 +203,7 @@ func (s *Server) SubcribeToPlan(w http.ResponseWriter, r *http.Request) {
 	plan, err := s.Models.Plan.GetOne(planID)
 	if err != nil {
 		s.Session.Put(r.Context(), ERROR_CTX, UNSUCCESSFUL_FIND_PLAN_MSG)
-		http.Redirect(w, r, membersPlanPath, http.StatusSeeOther)
+		http.Redirect(w, r, MembersPlanPath, http.StatusSeeOther)
 		return
 	}
 
@@ -266,14 +266,14 @@ func (s *Server) SubcribeToPlan(w http.ResponseWriter, r *http.Request) {
 	err = s.Models.Plan.SubscribeUserToPlan(user, *plan)
 	if err != nil {
 		s.Session.Put(r.Context(), ERROR_CTX, UNSUCCESSFUL_SUBSCRIBE_MSG)
-		http.Redirect(w, r, membersPlanPath, http.StatusSeeOther)
+		http.Redirect(w, r, MembersPlanPath, http.StatusSeeOther)
 		return
 	}
 
 	u, err := s.Models.User.GetOne(user.ID)
 	if err != nil {
 		s.Session.Put(r.Context(), ERROR_CTX, NOT_FOUND_USER_BY_ID_MSG)
-		http.Redirect(w, r, membersPlanPath, http.StatusSeeOther)
+		http.Redirect(w, r, MembersPlanPath, http.StatusSeeOther)
 		return
 	}
 
@@ -281,7 +281,7 @@ func (s *Server) SubcribeToPlan(w http.ResponseWriter, r *http.Request) {
 
 	// redirect
 	s.Session.Put(r.Context(), FLASH_CTX, SUCCESSFUL_SUBSCRIBE_MSG)
-	http.Redirect(w, r, membersPlanPath, http.StatusSeeOther)
+	http.Redirect(w, r, MembersPlanPath, http.StatusSeeOther)
 }
 
 func (s *Server) ListOfPlans(w http.ResponseWriter, r *http.Request) {
