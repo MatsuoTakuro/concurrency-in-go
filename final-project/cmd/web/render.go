@@ -10,8 +10,8 @@ import (
 	"github.com/MatsuoTakuro/final-project/data"
 )
 
-// TargetTmplPath is the path to the templates and can be switched out for testing
-var TargetTmplPath = TEMPLATE_PATH
+// HTMLTmplPath is the path to the templates and can be switched out for testing
+var HTMLTmplPath = TEMPLATE_PATH
 
 const (
 	TEMPLATE_PATH = "./cmd/web/templates"
@@ -53,8 +53,8 @@ func (s *Server) render(
 ) {
 
 	var baseTmpls []string
-	baseTmpls = append(baseTmpls, filepath.Join(TargetTmplPath, targetHTML))
-	baseTmpls = append(baseTmpls, getPartials(TargetTmplPath)...)
+	baseTmpls = append(baseTmpls, filepath.Join(HTMLTmplPath, targetHTML))
+	baseTmpls = append(baseTmpls, getPartials(HTMLTmplPath)...)
 
 	if td == nil {
 		td = &TemplateData{}

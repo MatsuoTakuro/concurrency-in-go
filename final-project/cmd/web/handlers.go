@@ -240,7 +240,7 @@ func (s *Server) SubcribeToPlan(w http.ResponseWriter, r *http.Request) {
 		defer s.AsyncJob.Done() // decrement counter every time a manual is generated and passed to the mailer to send
 
 		pdf := s.generateManual(user, plan)
-		filePath := fmt.Sprintf(MANUAL_OUTPUT_TEMP_PATH, user.ID)
+		filePath := fmt.Sprintf(ManualOutputTempPath, user.ID)
 		err := pdf.OutputFileAndClose(filePath)
 		if err != nil {
 			s.AsyncErr <- err

@@ -129,7 +129,7 @@ func (m *Mailer) sendMail(
 	if err != nil {
 		errChan <- err
 	}
-	log.Printf("Email successfully sent to %s. Subject: \"%s\". Message: \"%s\"\n", msg.To, msg.Subject, msg.Data)
+	log.Printf("Email successfully sent To: %s, Subject: \"%s\", Message: \"%s\"\n", msg.To, msg.Subject, msg.Data)
 }
 
 func (m *Mailer) buildHTMLMessage(msg Message) (string, error) {

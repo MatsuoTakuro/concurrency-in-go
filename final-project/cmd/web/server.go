@@ -23,10 +23,13 @@ const (
 	ERROR_ASYNC_JOB_MSG    = "error asynchronously processing job: %w"
 )
 
+var ManualTmplPath = MANUAL_TMPL_PATH
+var ManualOutputTempPath = MANUAL_OUTPUT_TEMP_PATH
+
 const (
 	MANUAL_TMPL_PATH        = "./pdf/manual.pdf"
 	MANUAL_OUTPUT_TEMP_PATH = "./tmp/%d_manual.pdf" // %d is a placeholder for user id
-	MANUAL_ATTCH_NAME       = "manual.pdf"
+	MANUAL_ATTCH_NAME       = "Manual.pdf"
 )
 
 type Server struct {
@@ -163,6 +166,7 @@ func (s *Server) listenForShutdown() {
 
 	Also, you can refer to another more realistic example for usage of signal.NotifyContext here -> (https://github.com/MatsuoTakuro/fcoin-balances-manager/blob/0da561455bcfcc3a54a9b6063a9e8c50e9e697dd/cmd/server.go#L30)
 	*/
+	os.Exit(0)
 }
 
 func (s *Server) getInvoice(u data.User, plan *data.Plan) (string, error) {
@@ -179,7 +183,7 @@ func (s *Server) generateManual(u data.User, plan *data.Plan) *gofpdf.Fpdf {
 
 	time.Sleep(5 * time.Second) // simulate a long time to create a PDF
 
-	tmplID := importer.ImportPage(pdf, MANUAL_TMPL_PATH, 1, "/MediaBox") // import page 1 of the manual.pdf
+	tmplID := importer.ImportPage(pdf, ManualTmplPath, 1, "/MediaBox") // import page 1 of the manual.pdf
 	pdf.AddPage()
 
 	importer.UseImportedTemplate(pdf, tmplID, 0, 0, 215.9, 0) // x, y, width, height
@@ -223,5 +227,4 @@ func (s *Server) shutdown() {
 	close(s.StopAsync)
 
 	s.InfoLog.Println("shutting down application...")
-	os.Exit(0)
 }

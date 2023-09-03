@@ -43,7 +43,7 @@ func main() {
 	srv.initMailer()
 	go srv.listenForMail()
 
-	// listen for signals
+	// listen for shutdown signal
 	go srv.listenForShutdown()
 
 	// listen for errors

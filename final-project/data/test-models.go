@@ -33,21 +33,23 @@ type UserTest struct {
 	Plan      *Plan
 }
 
+var sampleUser = User{
+	ID:        1,
+	Email:     "admin@example.com",
+	FirstName: "Admin",
+	LastName:  "Admin",
+	Password:  "abc",
+	IsActive:  Active,
+	IsAdmin:   Admin,
+	CreatedAt: time.Now(),
+	UpdatedAt: time.Now(),
+}
+
 // GetAll returns a slice of all users, sorted by last name
 func (u *UserTest) GetAll() ([]*User, error) {
 	var users []*User
 
-	user := User{
-		ID:        1,
-		Email:     "admin@example.com",
-		FirstName: "Admin",
-		LastName:  "Admin",
-		Password:  "abc",
-		IsActive:  Active,
-		IsAdmin:   Admin,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
+	user := sampleUser
 
 	users = append(users, &user)
 
@@ -56,17 +58,7 @@ func (u *UserTest) GetAll() ([]*User, error) {
 
 // GetByEmail returns one user by email
 func (u *UserTest) GetByEmail(email string) (*User, error) {
-	user := User{
-		ID:        1,
-		Email:     "admin@example.com",
-		FirstName: "Admin",
-		LastName:  "Admin",
-		Password:  "abc",
-		IsActive:  Active,
-		IsAdmin:   Admin,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
+	user := sampleUser
 
 	return &user, nil
 }
@@ -118,16 +110,18 @@ type PlanTest struct {
 	UpdatedAt           time.Time
 }
 
+var samplePlan = Plan{
+	ID:         1,
+	PlanName:   "Bronze Plan",
+	PlanAmount: 1000,
+	CreatedAt:  time.Now(),
+	UpdatedAt:  time.Now(),
+}
+
 func (p *PlanTest) GetAll() ([]*Plan, error) {
 	var plans []*Plan
 
-	plan := Plan{
-		ID:         1,
-		PlanName:   "Bronze Plan",
-		PlanAmount: 1000,
-		CreatedAt:  time.Now(),
-		UpdatedAt:  time.Now(),
-	}
+	plan := samplePlan
 
 	plans = append(plans, &plan)
 
@@ -136,13 +130,7 @@ func (p *PlanTest) GetAll() ([]*Plan, error) {
 
 // GetOne returns one plan by id
 func (p *PlanTest) GetOne(id int) (*Plan, error) {
-	plan := Plan{
-		ID:         1,
-		PlanName:   "Bronze Plan",
-		PlanAmount: 1000,
-		CreatedAt:  time.Now(),
-		UpdatedAt:  time.Now(),
-	}
+	plan := samplePlan
 
 	return &plan, nil
 }

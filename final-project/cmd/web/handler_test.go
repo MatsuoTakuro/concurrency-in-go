@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/MatsuoTakuro/final-project/data"
 )
 
 type optAssert func(params optParams)
@@ -18,11 +20,14 @@ type optParams struct {
 }
 
 func Test_Handlers(t *testing.T) {
-	TargetTmplPath = "./templates"
+	HTMLTmplPath = "./templates"
+	ManualTmplPath = "./../../pdf/manual.pdf"
+	ManualOutputTempPath = "./../../tmp/%d_manual.pdf"
 
 	tests := map[string]struct {
 		path               string
 		method             string
+		queryParams        url.Values
 		rawBody            url.Values
 		expectedStatusCode int
 		handler            http.HandlerFunc
@@ -79,11 +84,36 @@ func Test_Handlers(t *testing.T) {
 				},
 			},
 		},
+		"subscribe to plan": {
+			path:    SUBSCRIBE_PATH,
+			method:  http.MethodGet,
+			rawBody: nil,
+			queryParams: url.Values{
+				PLAN_ID_CTX: {"1"},
+			},
+			expectedStatusCode: http.StatusSeeOther,
+			handler:            testServer.SubcribeToPlan,
+			sessionData: map[string]any{
+				USER_CTX: data.User{
+					ID:        1,
+					Email:     "admin@example.com",
+					FirstName: "Admin",
+					LastName:  "User",
+					IsActive:  data.Active,
+				},
+			},
+			expectedHTML: nil,
+			optAsserts:   nil,
+		},
 	}
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			w := httptest.NewRecorder()
+
+			if tt.queryParams != nil {
+				tt.path += "?" + tt.queryParams.Encode()
+			}
 			var reqBody = &strings.Reader{}
 			if tt.rawBody != nil {
 				reqBody = strings.NewReader(tt.rawBody.Encode())
@@ -98,6 +128,9 @@ func Test_Handlers(t *testing.T) {
 			}
 
 			tt.handler.ServeHTTP(w, r)
+
+			// wait for the async job to finish if it is fired off
+			testServer.AsyncJob.Wait()
 
 			if w.Code != tt.expectedStatusCode {
 				t.Errorf("expected status code %d; got %d", tt.expectedStatusCode, w.Code)

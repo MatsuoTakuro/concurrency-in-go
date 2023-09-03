@@ -44,7 +44,7 @@ restart: stop start
 
 ## test: runs all tests
 test:
-	go test -v ./... -count=1
+	go test -v ./... -count=1 -race
 
 coverage:
 	go test ./... -coverprofile=./coverage.out

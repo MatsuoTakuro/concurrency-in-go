@@ -40,35 +40,43 @@ func TestMain(m *testing.M) {
 	msg := make(chan Message, 100)
 	stopMail := make(chan bool)
 	testServer.Mailer = Mailer{
-		AsyncMail: testServer.AsyncJob,
-		Msg:       msg,
-		MailErr:   mailErr,
-		StopMail:  stopMail,
+		AsyncMail:     testServer.AsyncJob,
+		Msg:           msg,
+		MailErr:       mailErr,
+		StopMail:      stopMail,
+		AcceptMessage: true,
+		mutex:         sync.RWMutex{},
 	}
 
 	// run a dummy mailer to listen for messages
 	go func() {
-		select {
-		case <-testServer.Mailer.Msg:
+		for {
+			select {
+			case msg := <-testServer.Mailer.Msg:
+				testServer.Mailer.AsyncMail.Done() // simulate sending mail and decrement the wait group counter
+				testServer.InfoLog.Printf("simulated sending an email To: %s, Subject: \"%s\"\n", msg.To, msg.Subject)
 
-		case err := <-testServer.Mailer.MailErr:
-			testServer.InfoLog.Println(fmt.Errorf(ERROR_SENDING_MAIL_MSG, err))
+			case err := <-testServer.Mailer.MailErr:
+				testServer.InfoLog.Println(fmt.Errorf(ERROR_SENDING_MAIL_MSG, err))
 
-		case <-testServer.Mailer.StopMail:
-			testServer.InfoLog.Println("stopping sending mails...")
-			return
+			case <-testServer.Mailer.StopMail:
+				testServer.InfoLog.Println("stopping sending mails...")
+				return
+			}
 		}
 	}()
 
 	// run a dummy listener for async job results
 	go func() {
-		select {
-		case err := <-testServer.AsyncErr:
-			testServer.ErrorLog.Println(fmt.Errorf(ERROR_ASYNC_JOB_MSG, err))
+		for {
+			select {
+			case err := <-testServer.AsyncErr:
+				testServer.ErrorLog.Println(fmt.Errorf(ERROR_ASYNC_JOB_MSG, err))
 
-		case <-testServer.StopAsync:
-			testServer.InfoLog.Println("stopping listening for errors...")
-			return
+			case <-testServer.StopAsync:
+				testServer.InfoLog.Println("stopping listening for errors...")
+				return
+			}
 		}
 	}()
 

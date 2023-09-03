@@ -49,7 +49,7 @@ func TestServer_IsAuthenticated(t *testing.T) {
 }
 
 func TestServer_render(t *testing.T) {
-	TargetTmplPath = "./templates"
+	HTMLTmplPath = "./templates"
 
 	w := httptest.NewRecorder()
 	rawReq, _ := http.NewRequest("GET", "/", nil)
